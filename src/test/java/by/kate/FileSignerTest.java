@@ -1,5 +1,6 @@
 package by.kate;
 
+import org.apache.commons.math3.linear.RealMatrix;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -9,9 +10,10 @@ import java.nio.file.Path;
 
 import static org.junit.Assert.assertTrue;
 
-public class FileSignerTest extends SignAlgorithmTest {
+public class FileSignerTest {
 
     private FileSigner signer = new FileSigner();
+    private KeyGenerator generator = new KeyGenerator();
 
     private Path tempFile;
 
@@ -23,9 +25,13 @@ public class FileSignerTest extends SignAlgorithmTest {
 
     @Test
     public void shouldSignFile() throws IOException {
-        final String signature = "sign";
-        signer.sign(tempFile, signature, t, a);
-        assertTrue(signer.verify(tempFile, signature, t, c));
+        final String signature = "Some sign";
+        final int size = signature.getBytes().length;
+        final RealMatrix privateKey = generator.generateTPrivateKey(size);
+        final RealMatrix aPublicKey = generator.generateAPublicKey(size);
+        final RealMatrix cPublicKey = generator.generateCPublicKey(size);
+        signer.sign(tempFile, signature, privateKey, aPublicKey);
+        assertTrue(signer.verify(tempFile, signature, privateKey, cPublicKey));
     }
 
 }

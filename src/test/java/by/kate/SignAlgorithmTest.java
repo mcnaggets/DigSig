@@ -19,9 +19,9 @@ public class SignAlgorithmTest {
 
     final RealMatrix t = MatrixUtils.createRealMatrix(new double[][]{
             {1, 4, 11, 1},
-            {0, -1, 6, 2},
+            {0, 1, 6, 2},
             {0, 0, 1, 11},
-            {0, 0, 0, -1}
+            {0, 0, 0, 1}
     });
 
     final RealMatrix c = MatrixUtils.createRowRealMatrix(new double[]{1, 0, 0, 0});
