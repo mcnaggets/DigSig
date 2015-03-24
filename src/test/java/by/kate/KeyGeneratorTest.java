@@ -1,6 +1,8 @@
 package by.kate;
 
+import org.apache.commons.math3.linear.FieldMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
+import org.apache.commons.math3.util.BigReal;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -13,21 +15,21 @@ public class KeyGeneratorTest {
 
     @Test
     public void shouldGenerateAPublicKey() {
-        final RealMatrix a = generator.generateAPublicKey(size);
+        final FieldMatrix<BigReal> a = generator.generateAPublicKey(size);
         assertEquals(a.getRowDimension(), size);
         assertEquals(a.getColumnDimension(), size);
     }
 
     @Test
     public void shouldGenerateCPublicKey() {
-        final RealMatrix a = generator.generateCPublicKey(size);
+        final FieldMatrix<BigReal> a = generator.generateCPublicKey(size);
         assertEquals(a.getRowDimension(), 1);
         assertEquals(a.getColumnDimension(), size);
     }
 
     @Test
     public void shouldGenerateTPrivateKey() {
-        final RealMatrix a = generator.generateTPrivateKey(size);
+        final FieldMatrix<BigReal> a = generator.generateTPrivateKey(size);
         assertEquals(a.getRowDimension(), size);
         assertEquals(a.getColumnDimension(), size);
     }

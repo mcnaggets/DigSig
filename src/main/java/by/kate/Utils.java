@@ -1,6 +1,6 @@
 package by.kate;
 
-import java.nio.ByteBuffer;
+import org.apache.commons.math3.util.BigReal;
 
 public class Utils {
 
@@ -15,11 +15,11 @@ public class Utils {
         return bytes;
     }
 
-    public static double[] toDoubleArray(byte[] byteArray) {
-        double[] doubles = new double[byteArray.length];
+    public static BigReal[] toBigRealArray(byte[] byteArray) {
+        BigReal[] bigReals = new BigReal[byteArray.length];
         for (int i = 0; i < byteArray.length; i++) {
-            doubles[i] = byteArray[i];
+            bigReals[i] = new BigReal(byteArray[i]);
         }
-        return doubles;
+        return bigReals;
     }
 }

@@ -1,7 +1,9 @@
 package by.kate;
 
 import org.apache.commons.lang.SerializationUtils;
+import org.apache.commons.math3.linear.FieldMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
+import org.apache.commons.math3.util.BigReal;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -18,8 +20,8 @@ public class FileSigner {
 
     private SignAlgorithm algorithm = new SignAlgorithm();
 
-    public void sign(Path path, String signature, RealMatrix privateKey, RealMatrix publicKey) throws IOException {
-        final double[][] encode = algorithm.encode(signature.getBytes(), publicKey, privateKey);
+    public void sign(Path path, String signature, FieldMatrix<BigReal> privateKey, FieldMatrix<BigReal> publicKey) throws IOException {
+        final BigReal[][] encode = algorithm.encode(signature.getBytes(), publicKey, privateKey);
         final byte[] serialize = SerializationUtils.serialize(encode);
 
         try (final BufferedWriter bufferedWriter = Files.newBufferedWriter(path, StandardOpenOption.APPEND)) {
@@ -32,7 +34,7 @@ public class FileSigner {
         }
     }
 
-    public boolean verify(Path path, String signature, RealMatrix privateKey, RealMatrix publicKey) throws IOException {
+    public boolean verify(Path path, String signature, FieldMatrix<BigReal> privateKey, FieldMatrix<BigReal> publicKey) throws IOException {
         final List<String> lines = Files.readAllLines(path);
         final int begin = lines.indexOf(BEGIN_SIGNATURE);
         final int end = lines.indexOf(END_SIGNATURE);
@@ -40,7 +42,7 @@ public class FileSigner {
             throw new IllegalStateException();
         }
         final byte[] decode = Base64.getDecoder().decode(lines.get(begin + 1));
-        final double[][] encodedMatrix = (double[][]) SerializationUtils.deserialize(decode);
+        final BigReal[][] encodedMatrix = (BigReal[][]) SerializationUtils.deserialize(decode);
         final byte[] decodedSignature = algorithm.decode(encodedMatrix, privateKey, publicKey);
         return signature.equals(new String(decodedSignature));
     }

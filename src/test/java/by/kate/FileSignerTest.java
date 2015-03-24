@@ -1,6 +1,7 @@
 package by.kate;
 
-import org.apache.commons.math3.linear.RealMatrix;
+import org.apache.commons.math3.linear.FieldMatrix;
+import org.apache.commons.math3.util.BigReal;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -25,11 +26,11 @@ public class FileSignerTest {
 
     @Test
     public void shouldSignFile() throws IOException {
-        final String signature = "Some sign";
+        final String signature = "Some signatory";
         final int size = signature.getBytes().length;
-        final RealMatrix privateKey = generator.generateTPrivateKey(size);
-        final RealMatrix aPublicKey = generator.generateAPublicKey(size);
-        final RealMatrix cPublicKey = generator.generateCPublicKey(size);
+        final FieldMatrix<BigReal> privateKey = generator.generateTPrivateKey(size);
+        final FieldMatrix<BigReal> aPublicKey = generator.generateAPublicKey(size);
+        final FieldMatrix<BigReal> cPublicKey = generator.generateCPublicKey(size);
         signer.sign(tempFile, signature, privateKey, aPublicKey);
         assertTrue(signer.verify(tempFile, signature, privateKey, cPublicKey));
     }
