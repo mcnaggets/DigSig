@@ -1,5 +1,6 @@
-package by.kate;
+package by.kate.sevice;
 
+import by.kate.util.Utils;
 import org.apache.commons.math3.linear.*;
 import org.apache.commons.math3.util.BigReal;
 import org.apache.commons.math3.util.BigRealField;

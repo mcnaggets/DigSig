@@ -1,8 +1,7 @@
-package by.kate;
+package by.kate.sevice;
 
 import org.apache.commons.math3.linear.FieldMatrix;
 import org.apache.commons.math3.linear.MatrixUtils;
-import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.util.BigReal;
 import org.apache.commons.math3.util.BigRealField;
 

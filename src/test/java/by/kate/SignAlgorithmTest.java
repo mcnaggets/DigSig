@@ -1,8 +1,8 @@
 package by.kate;
 
+import by.kate.sevice.SignAlgorithm;
 import org.apache.commons.math3.linear.FieldMatrix;
 import org.apache.commons.math3.linear.MatrixUtils;
-import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.util.BigReal;
 import org.junit.Test;
 

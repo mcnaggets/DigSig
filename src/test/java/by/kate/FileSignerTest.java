@@ -1,5 +1,7 @@
 package by.kate;
 
+import by.kate.sevice.FileSigner;
+import by.kate.sevice.KeyGenerator;
 import org.apache.commons.math3.linear.FieldMatrix;
 import org.apache.commons.math3.util.BigReal;
 import org.junit.Before;
@@ -20,13 +22,13 @@ public class FileSignerTest {
 
     @Before
     public void initialize() throws IOException {
-        tempFile = Files.createTempFile("text", "txt");
+        tempFile = Files.createTempFile("text_", ".txt");
         Files.write(tempFile, "temporary file content".getBytes());
     }
 
     @Test
     public void shouldSignFile() throws IOException {
-        final String signature = "Some signatory";
+        final String signature = "Some signatory sample ^)";
         final int size = signature.getBytes().length;
         final FieldMatrix<BigReal> privateKey = generator.generateTPrivateKey(size);
         final FieldMatrix<BigReal> aPublicKey = generator.generateAPublicKey(size);
