@@ -21,7 +21,7 @@ public class JavaFXApplication extends Application {
 
         Scene scene = new Scene(root, 800, 600);
 
-        stage.setTitle("Welcome");
+        stage.setTitle("Цифровая подпись");
         stage.setScene(scene);
         stage.show();
     }
