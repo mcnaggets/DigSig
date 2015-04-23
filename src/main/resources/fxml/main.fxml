@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import java.lang.String?>
 <AnchorPane xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="by.kate.ui.MainController">
     <children>
         <StackPane AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0"
                    AnchorPane.topAnchor="0.0">
             <children>
-                <VBox spacing="10">
+                <VBox>
                     <children>
-                        <HBox spacing="10">
+                        <HBox>
                             <children>
                                 <Button onAction="#loadFile" text="Загрузить файл"/>
                                 <Button onAction="#saveFile" text="Сохранить файл"/>
@@ -19,32 +19,42 @@
 
                                 <Button onAction="#verifyFile" text="Проверить подпись"/>
                                 <Button onAction="#unSignFile" text="Удалить подпись"/>
-
-                                <Button onAction="#showKeys" text="Показать ключи"/>
+                                <Button onAction="#showSignatory" text="Показать подпись"/>
                             </children>
-                            <padding>
-                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                            </padding>
                         </HBox>
                         <Label fx:id="filePath"/>
-                        <HBox alignment="CENTER_LEFT" spacing="10">
+                        <HBox alignment="CENTER_LEFT">
                             <children>
-                                <Label text="Введите подпись"/>
+                                <Label text="Частный ключ" prefWidth="120"/>
+                                <Button onAction="#generatePrivateKey" text="Создать"/>
+                                <Button onAction="#loadPrivateKey" text="Загрузить"/>
+                                <Button onAction="#savePrivateKey" text="Сохранить"/>
+                                <Button onAction="#showPrivateKey" text="Показать"/>
+                            </children>
+                        </HBox>
+                        <HBox alignment="CENTER_LEFT">
+                            <children>
+                                <Label text="Открытый ключ" prefWidth="120"/>
+                                <Button onAction="#generatePublicKey" text="Создать"/>
+                                <Button onAction="#loadPublicKey" text="Загрузить"/>
+                                <Button onAction="#savePublicKey" text="Сохранить"/>
+                                <Button onAction="#showPublicKey" text="Показать"/>
+                            </children>
+                        </HBox>
+                        <HBox alignment="CENTER_LEFT">
+                            <children>
+                                <Label text="Введите подпись" prefWidth="120"/>
                                 <TextField fx:id="signatory" text="sign" HBox.hgrow="ALWAYS"/>
-                                <Button text="Изменить ключи" onAction="#changeKeys"/>
                             </children>
                         </HBox>
                         <TextArea fx:id="fileContent" wrapText="true" VBox.vgrow="ALWAYS"/>
                         <Label fx:id="infoLabel"/>
                     </children>
-                    <padding>
-                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                    </padding>
-                    <StackPane.margin>
-                        <Insets/>
-                    </StackPane.margin>
                 </VBox>
             </children>
         </StackPane>
     </children>
+    <stylesheets>
+        <String fx:value="/css/style.css"/>
+    </stylesheets>
 </AnchorPane>

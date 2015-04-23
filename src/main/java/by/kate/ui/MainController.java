@@ -9,8 +9,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import org.apache.commons.math3.linear.DefaultFieldMatrixChangingVisitor;
@@ -26,6 +24,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.ResourceBundle;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class MainController implements Initializable {
@@ -36,28 +35,29 @@ public class MainController implements Initializable {
     public Label filePath;
 
     private Optional<File> file = Optional.empty();
-
-    private FileSigner signer = new FileSigner();
-    private KeyGenerator generator = new KeyGenerator();
-
     private FieldMatrix<BigReal> publicKey;
     private FieldMatrix<BigReal> privateKey;
+
+    private KeyGenerator generator = new KeyGenerator();
+
     private String storedSignatory;
 
     public void loadFile() {
-        FileChooser chooser = new FileChooser();
-        final File f = chooser.showOpenDialog(null);
-        if (f != null) {
-            changeKeys();
-            showFile(f);
-        }
+        onLoadFile(this::showFile);
     }
 
     private void showFile(File file) {
         try {
             this.file = Optional.of(file);
             filePath.setText(file.getPath());
-            fileContent.setText(Files.readAllLines(file.toPath()).stream().collect(Collectors.joining("\n")));
+            final FileSigner fileSigner = getFileSigner(file.toPath());
+            if (fileSigner.canDisplayContent()) {
+                fileContent.setText(Files.readAllLines(file.toPath()).stream().collect(Collectors.joining("\n")));
+                fileContent.setEditable(true);
+            } else {
+                fileContent.setText("Не возможно отобразить файл");
+                fileContent.setEditable(false);
+            }
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -66,11 +66,26 @@ public class MainController implements Initializable {
     public void signFile() {
         file.ifPresent(f -> {
             if (keysInvalid()) {
-                changeKeys();
+                invalidKeys();
+                return;
             }
-            signer.sign(f.toPath(), getSignatory(), privateKey, publicKey);
+            signFile(f);
             showFile(f);
         });
+    }
+
+    private void invalidKeys() {
+        showInfo(Color.RED, "Ключи не соответствуют подписи");
+    }
+
+    private void signFile(File f) {
+        final Path path = f.toPath();
+        final FileSigner signer = getFileSigner(path);
+        signer.sign(path, getSignatory(), privateKey, publicKey);
+    }
+
+    private FileSigner getFileSigner(Path path) {
+        return FileSigner.getSigner(path);
     }
 
     private boolean keysInvalid() {
@@ -97,7 +112,7 @@ public class MainController implements Initializable {
     public void verifyFile() {
         file.ifPresent(f -> {
             final FieldMatrix<BigReal> publicKey = generator.generateCPublicKey(getLength());
-            final boolean verifyResult = !keysInvalid() && signer.verify(f.toPath(), getSignatory(), privateKey, publicKey);
+            final boolean verifyResult = !keysInvalid() && getFileSigner(f.toPath()).verify(f.toPath(), getSignatory(), privateKey, publicKey);
             if (verifyResult) {
                 showInfo(Color.GREEN, "Подпись совпадает");
             } else {
@@ -113,7 +128,7 @@ public class MainController implements Initializable {
 
     public void unSignFile() {
         file.ifPresent(f -> {
-            signer.unSign(f.toPath());
+            getFileSigner(f.toPath()).unSign(f.toPath());
             showFile(f);
         });
     }
@@ -129,15 +144,12 @@ public class MainController implements Initializable {
         });
     }
 
-    public void showKeys() {
+    public void showMatrix(FieldMatrix<BigReal> matrix, String label) {
         file.ifPresent(f -> {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Ключи");
-            alert.setHeaderText("Ключи");
-            alert.getDialogPane().setContent(new HBox(
-                    new VBox(new Label("Закрытый ключ"), writeMatrix(privateKey)),
-                    new VBox(new Label("Открытый ключ"), writeMatrix(publicKey))
-            ));
+            alert.setTitle(label);
+            alert.setHeaderText(label);
+            alert.getDialogPane().setContent(writeMatrix(matrix));
 
             alert.showAndWait();
         });
@@ -159,35 +171,117 @@ public class MainController implements Initializable {
         return grid;
     }
 
-    public void changeKeys() {
-        generatePrivateKey();
-        generatePublicKey();
-        storedSignatory = signatory.getText();
-        clearInfo();
-    }
-
     private void clearInfo() {
+        storedSignatory = signatory.getText();
         infoLabel.setText("");
     }
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         try {
-            signatory.textProperty().addListener((observable, oldValue, newValue) -> {
-                if (!signatory.getText().equals(storedSignatory)) {
-                    showInfo(Color.ORANGE, "Подпись изменена, необходимо изменить ключи");
-                } else {
-                    clearInfo();
-                }
-            });
-
-            final Path temporaryFile = Files.createTempFile("temporary_file", ".txt");
-            Files.write(temporaryFile, "Sample content".getBytes());
-            changeKeys();
-            showFile(temporaryFile.toFile());
+            addSignatoryListener();
+            generatePublicKey();
+            generatePrivateKey();
+            createAndShowTemporaryFile();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
+    private void createAndShowTemporaryFile() throws IOException {
+        final Path temporaryFile = Files.createTempFile("temporary_file", ".txt");
+        Files.write(temporaryFile, "Sample content".getBytes());
+        showFile(temporaryFile.toFile());
+    }
+
+    private void addSignatoryListener() {
+        signatory.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (!signatory.getText().equals(storedSignatory)) {
+                signatoryChanged();
+            } else {
+                clearInfo();
+            }
+        });
+    }
+
+    private void signatoryChanged() {
+        showInfo(Color.ORANGE, "Подпись изменена, необходимо изменить ключи");
+    }
+
+    public void showSignatory() {
+        final FieldMatrix<BigReal> signatory = getFileSigner(null).generateSignature(getSignatory(), publicKey, privateKey);
+        showMatrix(signatory, "Подпись");
+    }
+
+    public void loadPrivateKey() throws IOException {
+        onLoadFile(this::readPrivateKeyFromFile);
+    }
+
+    public void loadPublicKey() throws IOException {
+        onLoadFile(this::readPublicKeyFromFile);
+    }
+
+    private void readPrivateKeyFromFile(File f) {
+        try {
+            privateKey = generator.readFromFile(f.toPath());
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private void readPublicKeyFromFile(File f) {
+        try {
+            publicKey = generator.readFromFile(f.toPath());
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private void onLoadFile(Consumer<File> consumer) {
+        FileChooser chooser = new FileChooser();
+        final File f = chooser.showOpenDialog(null);
+        if (f != null) {
+            consumer.accept(f);
+        }
+    }
+
+    private void onFileSave(Consumer<File> consumer) {
+        FileChooser chooser = new FileChooser();
+        final File f = chooser.showSaveDialog(null);
+        if (f != null) {
+            consumer.accept(f);
+        }
+    }
+
+    public void showPrivateKey() {
+        showMatrix(privateKey, "Частный ключ");
+    }
+
+    public void showPublicKey() {
+        showMatrix(publicKey, "Открытый ключ");
+    }
+
+    public void savePrivateKey() {
+        onFileSave(this::savePrivateKey);
+    }
+
+    private void savePrivateKey(File f) {
+        try {
+            generator.writeToFile(f.toPath(), privateKey);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private void savePublicKey(File f) {
+        try {
+            generator.writeToFile(f.toPath(), publicKey);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    public void savePublicKey() {
+        onFileSave(this::savePublicKey);
+    }
 }

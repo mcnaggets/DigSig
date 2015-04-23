@@ -15,15 +15,16 @@ import static org.junit.Assert.assertTrue;
 
 public class FileSignerTest {
 
-    private FileSigner signer = new FileSigner();
     private KeyGenerator generator = new KeyGenerator();
 
     private Path tempFile;
+    private FileSigner signer;
 
     @Before
     public void initialize() throws IOException {
         tempFile = Files.createTempFile("text_", ".txt");
         Files.write(tempFile, "temporary file content".getBytes());
+        signer = FileSigner.getSigner(tempFile);
     }
 
     @Test

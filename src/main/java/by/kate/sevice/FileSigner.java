@@ -1,89 +1,88 @@
 package by.kate.sevice;
 
-import by.kate.model.Signatory;
 import org.apache.commons.lang.SerializationUtils;
 import org.apache.commons.math3.linear.FieldMatrix;
+import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.util.BigReal;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.util.Base64;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import java.util.*;
 
-import static java.util.stream.Collectors.*;
+public abstract class FileSigner {
 
-public class FileSigner {
+    SignAlgorithm algorithm = new SignAlgorithm();
 
-    private static final String BEGIN_SIGNATURE = "#Begin signature";
-    private static final String END_SIGNATURE = "#End signature";
+    static final Map<String, FileSigner> SIGNER_MAP = new HashMap<>();
 
-    private SignAlgorithm algorithm = new SignAlgorithm();
+    static final String SIGNATORY = "Signatory";
 
-    public void sign(Path path, String signature, FieldMatrix<BigReal> privateKey, FieldMatrix<BigReal> publicKey) {
-        final BigReal[][] encode = algorithm.encode(signature.getBytes(), publicKey, privateKey);
-        final byte[] serialize = SerializationUtils.serialize(encode);
-
-        try (final BufferedWriter bufferedWriter = Files.newBufferedWriter(path, StandardOpenOption.APPEND)) {
-            bufferedWriter.newLine();
-            bufferedWriter.write(BEGIN_SIGNATURE);
-            bufferedWriter.newLine();
-            bufferedWriter.write(Base64.getEncoder().encodeToString(serialize));
-            bufferedWriter.newLine();
-            bufferedWriter.write(END_SIGNATURE);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+    static {
+        SIGNER_MAP.put("text/plain", new TextFileSigner());
+        SIGNER_MAP.put("application/msword", new DocFileSigner());
+        SIGNER_MAP.put("application/vnd.openxmlformats-officedocument.wordprocessingml.document", new DocXFileSigner());
     }
 
-    public void unSign(Path path) {
-        final Optional<Signatory> signatory = getSignatory(path);
-        signatory.ifPresent(s -> {
-            List<String> unSigned = s.getLines();
-            unSigned.remove(BEGIN_SIGNATURE);
-            unSigned.remove(s.getText());
-            unSigned.remove(END_SIGNATURE);
-            writeToFile(path, unSigned);
-        });
-    }
-
-    private void writeToFile(Path path, List<String> unSigned) {
+    public static FileSigner getSigner(Path path) {
         try {
-            Files.write(path, unSigned);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            return getFileSigner(path);
+        } catch (Exception e) {
+            return new NullFileSigner();
         }
+    }
+
+    private static FileSigner getFileSigner(Path path) throws IOException {
+        final String contentType = Files.probeContentType(path);
+        if (SIGNER_MAP.containsKey(contentType)) {
+            return SIGNER_MAP.get(contentType);
+        } else {
+            return new NullFileSigner();
+        }
+    }
+
+    public abstract void sign(Path path, String signature, FieldMatrix<BigReal> privateKey, FieldMatrix<BigReal> publicKey);
+
+    protected byte[] serialize(BigReal[][] encode) {
+        return SerializationUtils.serialize(encode);
+    }
+
+    public abstract void unSign(Path path);
+
+    public BigReal[][] algorithmEncode(String signature, FieldMatrix<BigReal> privateKey, FieldMatrix<BigReal> publicKey) {
+        return algorithm.encode(signature.getBytes(), publicKey, privateKey);
+    }
+
+    public FieldMatrix<BigReal> generateSignature(String signature, FieldMatrix<BigReal> publicKey, FieldMatrix<BigReal> privateKey) {
+        final BigReal[][] data = algorithmEncode(signature, privateKey, publicKey);
+        return MatrixUtils.createFieldMatrix(data);
     }
 
     public boolean verify(Path path, String signature, FieldMatrix<BigReal> privateKey, FieldMatrix<BigReal> publicKey) {
-        final Optional<Signatory> signatory = getSignatory(path);
+        final Optional<String> signatory = getSignatory(path);
         if (signatory.isPresent()) {
-            final byte[] decode = Base64.getDecoder().decode(signatory.get().getText());
-            final BigReal[][] encodedMatrix = (BigReal[][]) SerializationUtils.deserialize(decode);
+            final byte[] decode = base64Decode(signatory.get());
+            final BigReal[][] encodedMatrix = deserialize(decode);
             final byte[] decodedSignature = algorithm.decode(encodedMatrix, privateKey, publicKey);
             return signature.equals(new String(decodedSignature));
         }
         return false;
     }
 
-    private Optional<Signatory> getSignatory(Path path) {
-        final List<String> lines = readAllLines(path);
-        final int begin = lines.indexOf(BEGIN_SIGNATURE);
-        final int end = lines.indexOf(END_SIGNATURE);
-        if (begin < 0 || end < 2) {
-            return Optional.empty();
-        }
-        String text = IntStream.range(begin + 1, end).mapToObj(lines::get).collect(joining());
-        return Optional.of(new Signatory(begin, end, lines, text));
+    BigReal[][] deserialize(byte[] decode) {
+        return (BigReal[][]) SerializationUtils.deserialize(decode);
     }
 
-    private List<String> readAllLines(Path path) {
+    String base64Encode(byte[] serialize) {
+        return Base64.getEncoder().encodeToString(serialize);
+    }
+
+    byte[] base64Decode(String signatory) {
+        return Base64.getDecoder().decode(signatory);
+    }
+
+    List<String> readAllLines(Path path) {
         try {
             return Files.readAllLines(path);
         } catch (IOException e) {
@@ -91,4 +90,15 @@ public class FileSigner {
         }
     }
 
+    void writeToFile(Path path, List<String> unSigned) {
+        try {
+            Files.write(path, unSigned);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    abstract Optional<String> getSignatory(Path path);
+
+    public abstract boolean canDisplayContent();
 }
