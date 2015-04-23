@@ -14,7 +14,6 @@
                         <HBox>
                             <children>
                                 <Button onAction="#loadFile" text="Загрузить файл"/>
-                                <Button onAction="#saveFile" text="Сохранить файл"/>
                                 <Button onAction="#signFile" text="Подписать файл"/>
 
                                 <Button onAction="#verifyFile" text="Проверить подпись"/>

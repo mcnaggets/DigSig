@@ -1,6 +1,5 @@
 package by.kate.sevice;
 
-import by.kate.model.Signatory;
 import org.apache.commons.math3.linear.FieldMatrix;
 import org.apache.commons.math3.util.BigReal;
 
@@ -27,6 +26,11 @@ public class NullFileSigner extends FileSigner {
     @Override
     public boolean canDisplayContent() {
         return false;
+    }
+
+    @Override
+    public boolean supports() {
+        throw new UnsupportedOperationException("Файл не поддерживается");
     }
 
 }

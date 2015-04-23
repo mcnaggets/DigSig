@@ -10,6 +10,8 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
 import org.apache.commons.math3.linear.DefaultFieldMatrixChangingVisitor;
 import org.apache.commons.math3.linear.FieldMatrix;
@@ -18,10 +20,10 @@ import org.apache.commons.math3.util.BigReal;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.function.Consumer;
@@ -40,23 +42,27 @@ public class MainController implements Initializable {
 
     private KeyGenerator generator = new KeyGenerator();
 
-    private String storedSignatory;
-
     public void loadFile() {
         onLoadFile(this::showFile);
     }
 
     private void showFile(File file) {
+        final FileSigner fileSigner = getFileSigner(file.toPath());
+        if (fileSigner.supports()) {
+            initFile(file, fileSigner);
+        }
+    }
+
+    private void initFile(File file, FileSigner fileSigner) {
         try {
             this.file = Optional.of(file);
             filePath.setText(file.getPath());
-            final FileSigner fileSigner = getFileSigner(file.toPath());
             if (fileSigner.canDisplayContent()) {
                 fileContent.setText(Files.readAllLines(file.toPath()).stream().collect(Collectors.joining("\n")));
                 fileContent.setEditable(true);
             } else {
                 fileContent.setText("Не возможно отобразить файл");
-                fileContent.setEditable(false);
+                fileContent.setDisable(true);
             }
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -71,6 +77,7 @@ public class MainController implements Initializable {
             }
             signFile(f);
             showFile(f);
+            showInfo(Color.GREEN, "Файл подписан");
         });
     }
 
@@ -99,6 +106,7 @@ public class MainController implements Initializable {
 
     public void generatePublicKey() {
         publicKey = generator.generateAPublicKey(getLength());
+        showInfo(Color.GREEN, "Ключ создан");
     }
 
     private int getLength() {
@@ -107,6 +115,7 @@ public class MainController implements Initializable {
 
     public void generatePrivateKey() {
         privateKey = generator.generateTPrivateKey(getLength());
+        showInfo(Color.GREEN, "Ключ создан");
     }
 
     public void verifyFile() {
@@ -130,17 +139,7 @@ public class MainController implements Initializable {
         file.ifPresent(f -> {
             getFileSigner(f.toPath()).unSign(f.toPath());
             showFile(f);
-        });
-    }
-
-    public void saveFile() {
-        file.ifPresent(f -> {
-            try {
-                Files.write(f.toPath(), Arrays.asList(fileContent.getText().split("\n")));
-                showFile(f);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
+            showInfo(Color.GREEN, "Подпись удалена");
         });
     }
 
@@ -171,15 +170,11 @@ public class MainController implements Initializable {
         return grid;
     }
 
-    private void clearInfo() {
-        storedSignatory = signatory.getText();
-        infoLabel.setText("");
-    }
-
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         try {
-            addSignatoryListener();
+            Thread.setDefaultUncaughtExceptionHandler((t, x) -> showInfo(Color.RED, "Произошла ошибка: " + getErrorMessage(x)));
+            infoLabel.setFont(Font.font("Verdana", FontWeight.BOLD, 12));
             generatePublicKey();
             generatePrivateKey();
             createAndShowTemporaryFile();
@@ -188,24 +183,18 @@ public class MainController implements Initializable {
         }
     }
 
+    private String getErrorMessage(Throwable x) {
+        if (x instanceof RuntimeException
+                && x.getCause() instanceof InvocationTargetException) {
+            return x.getCause().getCause().getMessage();
+        }
+        return x.getMessage();
+    }
+
     private void createAndShowTemporaryFile() throws IOException {
         final Path temporaryFile = Files.createTempFile("temporary_file", ".txt");
         Files.write(temporaryFile, "Sample content".getBytes());
         showFile(temporaryFile.toFile());
-    }
-
-    private void addSignatoryListener() {
-        signatory.textProperty().addListener((observable, oldValue, newValue) -> {
-            if (!signatory.getText().equals(storedSignatory)) {
-                signatoryChanged();
-            } else {
-                clearInfo();
-            }
-        });
-    }
-
-    private void signatoryChanged() {
-        showInfo(Color.ORANGE, "Подпись изменена, необходимо изменить ключи");
     }
 
     public void showSignatory() {
@@ -224,17 +213,21 @@ public class MainController implements Initializable {
     private void readPrivateKeyFromFile(File f) {
         try {
             privateKey = generator.readFromFile(f.toPath());
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+        } catch (Exception e) {
+            wrongFile();
         }
     }
 
     private void readPublicKeyFromFile(File f) {
         try {
             publicKey = generator.readFromFile(f.toPath());
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+        } catch (Exception e) {
+            wrongFile();
         }
+    }
+
+    private void wrongFile() {
+        throw new UnsupportedOperationException("Не корректный файл");
     }
 
     private void onLoadFile(Consumer<File> consumer) {
@@ -242,6 +235,7 @@ public class MainController implements Initializable {
         final File f = chooser.showOpenDialog(null);
         if (f != null) {
             consumer.accept(f);
+            showInfo(Color.GREEN, "Файл загружен");
         }
     }
 
@@ -250,6 +244,7 @@ public class MainController implements Initializable {
         final File f = chooser.showSaveDialog(null);
         if (f != null) {
             consumer.accept(f);
+            showInfo(Color.GREEN, "Файл сохранён");
         }
     }
 

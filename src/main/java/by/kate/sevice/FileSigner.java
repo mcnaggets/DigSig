@@ -10,6 +10,8 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 
 public abstract class FileSigner {
 
@@ -101,4 +103,8 @@ public abstract class FileSigner {
     abstract Optional<String> getSignatory(Path path);
 
     public abstract boolean canDisplayContent();
+
+    public boolean supports() {
+        return true;
+    }
 }

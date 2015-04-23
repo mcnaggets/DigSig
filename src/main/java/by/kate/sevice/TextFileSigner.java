@@ -1,7 +1,6 @@
 package by.kate.sevice;
 
 import by.kate.model.Signatory;
-import org.apache.commons.lang.SerializationUtils;
 import org.apache.commons.math3.linear.FieldMatrix;
 import org.apache.commons.math3.util.BigReal;
 
@@ -24,19 +23,29 @@ public class TextFileSigner extends FileSigner {
 
     @Override
     public void sign(Path path, String signature, FieldMatrix<BigReal> privateKey, FieldMatrix<BigReal> publicKey) {
+        unSignIfSigned(path);
+
         final BigReal[][] encode = algorithmEncode(signature, privateKey, publicKey);
         final byte[] serialize = serialize(encode);
 
         try (final BufferedWriter bufferedWriter = Files.newBufferedWriter(path, StandardOpenOption.APPEND)) {
-            bufferedWriter.newLine();
-            bufferedWriter.write(BEGIN_SIGNATURE);
-            bufferedWriter.newLine();
-            bufferedWriter.write(base64Encode(serialize));
-            bufferedWriter.newLine();
-            bufferedWriter.write(END_SIGNATURE);
+            writeSignatory(serialize, bufferedWriter);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    private void unSignIfSigned(Path path) {
+        getSignatoryObject(path).ifPresent(signatory -> unSign(path));
+    }
+
+    private void writeSignatory(byte[] serialize, BufferedWriter bufferedWriter) throws IOException {
+        bufferedWriter.newLine();
+        bufferedWriter.write(BEGIN_SIGNATURE);
+        bufferedWriter.newLine();
+        bufferedWriter.write(base64Encode(serialize));
+        bufferedWriter.newLine();
+        bufferedWriter.write(END_SIGNATURE);
     }
 
     @Override
