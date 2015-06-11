@@ -9,6 +9,11 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
@@ -20,6 +25,9 @@ public abstract class FileSigner {
     static final Map<String, FileSigner> SIGNER_MAP = new HashMap<>();
 
     static final String SIGNATORY = "Signatory";
+    static final String SIGNATORY_TIME = "SignatoryTime";
+
+    static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     static {
         SIGNER_MAP.put("text/plain", new TextFileSigner());
@@ -101,6 +109,26 @@ public abstract class FileSigner {
     }
 
     abstract Optional<String> getSignatory(Path path);
+
+    protected boolean validateDate(Path path, String signatoryTime) {
+        if (signatoryTime != null) {
+            final FileTime lastModifiedTime = getFileTime(path);
+            final LocalDateTime fileTime = LocalDateTime.ofInstant(lastModifiedTime.toInstant(), ZoneId.systemDefault());
+            final Duration duration = Duration.between(LocalDateTime.parse(signatoryTime, FORMATTER), fileTime);
+            if (duration.abs().toMillis() > 3000) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private FileTime getFileTime(Path path) {
+        try {
+            return Files.getLastModifiedTime(path);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
 
     public abstract boolean canDisplayContent();
 

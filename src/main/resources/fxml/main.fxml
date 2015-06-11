@@ -24,7 +24,7 @@
                         <Label fx:id="filePath"/>
                         <HBox alignment="CENTER_LEFT">
                             <children>
-                                <Label text="Частный ключ" prefWidth="120"/>
+                                <Label text="Закрытый ключ" prefWidth="120"/>
                                 <Button onAction="#generatePrivateKey" text="Создать"/>
                                 <Button onAction="#loadPrivateKey" text="Загрузить"/>
                                 <Button onAction="#savePrivateKey" text="Сохранить"/>

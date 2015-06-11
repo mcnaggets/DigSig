@@ -249,7 +249,7 @@ public class MainController implements Initializable {
     }
 
     public void showPrivateKey() {
-        showMatrix(privateKey, "Частный ключ");
+        showMatrix(privateKey, "Закрытый ключ");
     }
 
     public void showPublicKey() {

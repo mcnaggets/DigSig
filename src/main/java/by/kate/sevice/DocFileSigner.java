@@ -13,6 +13,11 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.FileTime;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.Period;
+import java.time.ZoneId;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -24,6 +29,7 @@ public class DocFileSigner extends FileSigner {
         processDocument(path, document -> {
             final CustomProperties customProperties = getCustomProperties(document);
             customProperties.put(SIGNATORY, base64Encode(serialize(encode)));
+            customProperties.put(SIGNATORY_TIME, FORMATTER.format(LocalDateTime.now().plusSeconds(1)));
             setCustomProperties(document, customProperties);
             return writeToTempFile(document);
         }).ifPresent(tmp -> moveFile(path, tmp));
@@ -82,6 +88,7 @@ public class DocFileSigner extends FileSigner {
         processDocument(path, document -> {
             DocumentSummaryInformation si = getDocumentSummaryInformation(document);
             si.getCustomProperties().remove(SIGNATORY);
+            si.getCustomProperties().remove(SIGNATORY_TIME);
             return writeToTempFile(document);
         }).ifPresent(tmp -> moveFile(path, tmp));
     }
@@ -90,6 +97,8 @@ public class DocFileSigner extends FileSigner {
     Optional<String> getSignatory(Path path) {
         return processDocument(path, document -> {
             DocumentSummaryInformation si = getDocumentSummaryInformation(document);
+            final String signatoryTime = (String) si.getCustomProperties().get(SIGNATORY_TIME);
+            if (validateDate(path, signatoryTime)) return Optional.empty();
             final String signatory = (String) si.getCustomProperties().get(SIGNATORY);
             return Optional.ofNullable(signatory);
         });
